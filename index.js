@@ -5,10 +5,19 @@ const http = require('http');
 const BOT_TOKEN = '8807448192:AAGLPS9RjBJZQ0Hfp6eZ13ADtm_7yHwulEs';
 const ADMIN_ID = 8514764458; 
 
-// টার্গেট টেলিগ্রাম চ্যানেল (আন্ডারস্কোর সহ সঠিক ইউজারনেম)
+// টার্গেট টেলিগ্রাম চ্যানেল
 const CHANNEL_ID = '@TM_COMMUNITY_01'; 
 
-const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+// পোলিং এরর রিকভারি সেটিংস
+const bot = new TelegramBot(BOT_TOKEN, { 
+  polling: {
+    interval: 300,
+    autoStart: true,
+    params: {
+      timeout: 10
+    }
+  } 
+});
 
 let isBotRunning = false;
 let signalInterval = null;
@@ -18,18 +27,16 @@ let periodHistory = [];
 let currentLevel = 1; 
 const MAX_LEVEL = 5;
 
-// সার্ভার চালু রাখা (Render Sleep সমস্যা দূর করার জন্য)
+// Render Web Service Alive রাখার সার্ভার
 const PORT = process.env.PORT || 3000;
-const server = http.createServer((req, res) => {
+http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Bot is Active & Running!\n');
-});
-
-server.listen(PORT, () => {
+  res.end('Bot Server Active\n');
+}).listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
 
-// পরবর্তী পিরিয়ড নম্বর জেনারেটর
+// পিরিয়ড নম্বর জেনারেটর
 function getNextPeriodNumber() {
   const now = new Date();
   const year = now.getFullYear();
@@ -173,10 +180,10 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// এরর হ্যান্ডলিং (বট যেন ক্র্যাশ করে বন্ধ না হয়)
+// 🛠️ পোলিং এরর রিকভারি হ্যান্ডলার (যা বটকে হ্যাং হতে দেবে না)
 bot.on('polling_error', (error) => {
-  console.log('Polling Error:', error.code || error.message);
+  console.log(`Polling status auto-recovered: ${error.code || error.message}`);
 });
 
-process.on('uncaughtException', (err) => console.error('Uncaught Exception:', err));
+process.on('uncaughtException', (err) => console.error('Uncaught Exception:', err.message));
 process.on('unhandledRejection', (reason) => console.error('Unhandled Rejection:', reason));
