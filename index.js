@@ -23,22 +23,21 @@ let awaitingPeriodInput = false;
 // 🎯 5-STEP MARTINGALE & GAME MARKET STATE
 let currentLevel = 1; 
 const MAX_LEVEL = 5;
-let periodHistory = ['BIG', 'SMALL', 'BIG', 'BIG', 'SMALL', 'SMALL', 'BIG'];
+let periodHistory = ['BIG', 'SMALL', 'BIG', 'SMALL', 'BIG', 'SMALL']; // ব্যালেন্সড হিস্ট্রি
 
 // গেম মার্কেট ট্র্যাকার
-let activeGamePeriod = null; // গেমের লাইভ পিরিয়ড
+let activeGamePeriod = null; 
 
 // Render Keep-Alive Server
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Game Market Synced Engine Active\n');
+  res.end('Game Market Synced Dynamic Engine Active\n');
 }).listen(PORT, () => console.log(`Server listening on port ${PORT}`));
 
-// ⏱️ পিরিয়ড সিকোয়েন্স ইনক্রিমেন্টার (গেম মার্কেট সিঙ্ক)
+// ⏱️ পিরিয়ড নম্বর জেনারেটর
 function getNextMarketPeriod() {
   if (!activeGamePeriod) {
-    // ডিফল্ট স্টার্ট পিরিয়ড (যদি এডমিন সেট না করে)
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
     const bdTime = new Date(utc + (3600000 * 6));
@@ -49,7 +48,6 @@ function getNextMarketPeriod() {
     
     activeGamePeriod = `${year}${month}${day}10000001`;
   } else {
-    // গেমের বর্তমান পিরিয়ডের সাথে ১ যোগ করে পরের পিরিয়ড জেনারেট
     const basePart = activeGamePeriod.slice(0, -4);
     const numPart = parseInt(activeGamePeriod.slice(-4));
     const nextNum = String(numPart + 1).padStart(4, '0');
@@ -58,32 +56,26 @@ function getNextMarketPeriod() {
   return activeGamePeriod;
 }
 
-// 🧠 গেম মার্কেট প্যাটার্ন অ্যানালাইসিস
+// 🧠 ব্যালেন্সড BIG / SMALL অ্যানালাইসিস ইঞ্জিন (গতিশীল সিগন্যাল লজিক)
 function analyzeMarketPattern() {
-  const len = periodHistory.length;
-  const last1 = periodHistory[len - 1];
-  const last2 = periodHistory[len - 2];
-  const last3 = periodHistory[len - 3];
+  const last1 = periodHistory[periodHistory.length - 1];
+  const last2 = periodHistory[periodHistory.length - 2];
 
-  // ১. ড্রাগন ট্রেন্ড (Dragon Trend)
-  if (last1 === last2 && last2 === last3) {
-    return last1; 
+  // ১. পরপর ২টি একই সিগন্যাল আসলে ৫০% চান্স ট্রেন্ড পরিবর্তনের
+  if (last1 === last2) {
+    if (Math.random() < 0.55) {
+      return last1 === 'BIG' ? 'SMALL' : 'BIG';
+    } else {
+      return last1;
+    }
   }
 
-  // ২. পিং-পং/অল্টারনেট প্যাটার্ন (Ping-Pong)
-  if (last1 !== last2 && last2 !== last3 && last1 === last3) {
+  // ২. অল্টারনেট প্যাটার্ন (BIG -> SMALL -> BIG)
+  if (Math.random() < 0.50) {
     return last1 === 'BIG' ? 'SMALL' : 'BIG';
+  } else {
+    return Math.random() < 0.5 ? 'BIG' : 'SMALL';
   }
-
-  // ৩. মার্কেট ফ্রিকোয়েন্সি অ্যানালাইসিস
-  const recent = periodHistory.slice(-5);
-  const bigs = recent.filter(x => x === 'BIG').length;
-  const smalls = recent.filter(x => x === 'SMALL').length;
-
-  if (bigs > smalls) return 'BIG';
-  if (smalls > bigs) return 'SMALL';
-
-  return last1 === 'BIG' ? 'SMALL' : 'BIG';
 }
 
 // 📊 সিগন্যাল ও মার্টিঙ্গেল ইঞ্জিন
@@ -92,25 +84,26 @@ function generateMarketSignal() {
   const formattedSignal = decision === 'BIG' ? 'BIG 🟢' : 'SMALL 🔴';
 
   let activeBetLevel = currentLevel;
-  const isWin = Math.random() < 0.83; // ৮৩%+ একুরেসি লজিক
+  const isWin = Math.random() < 0.80; // ৮০%+ উইন রেট সিমুলেশন
 
   if (isWin) {
-    currentLevel = 1; 
+    currentLevel = 1; // উইন হলে ১ নম্বরে রিসেট
   } else {
     if (currentLevel < MAX_LEVEL) {
-      currentLevel++; 
+      currentLevel++; // লস হলে লেভেল ১ বাড়বে
     } else {
-      currentLevel = 1; 
+      currentLevel = 1; // ৫ম লেভেল শেষে রিসেট
     }
   }
 
-  if (periodHistory.length >= 20) periodHistory.shift();
+  // হিস্ট্রি আপডেট (যাতে নিয়মিত BIG এবং SMALL সিগন্যাল অদলবদল হয়)
   periodHistory.push(decision);
+  if (periodHistory.length > 10) periodHistory.shift();
 
   return { signal: formattedSignal, level: activeBetLevel };
 }
 
-// ⏱️ চ্যানেলে সিগন্যাল পাঠানোর ফাংশন
+// ⏱️ সিগন্যাল পাবলিশ করার ফাংশন
 async function publishMarketSignal() {
   if (!isBotRunning) return;
 
@@ -168,10 +161,9 @@ bot.on('callback_query', async (query) => {
     } else {
       isBotRunning = true;
       currentLevel = 1;
-      await bot.answerCallbackQuery(query.id, { text: 'গেম মার্কেট সিগন্যাল চালু হয়েছে!' });
+      await bot.answerCallbackQuery(query.id, { text: 'সিগন্যাল চালু হয়েছে!' });
       
       await publishMarketSignal();
-      // প্রতি ৩০ সেকেন্ড পরপর গেম মার্কেটের পিরিয়ড অনুযায়ী সিগন্যাল সেন্ড
       marketLoopInterval = setInterval(async () => {
         if (isBotRunning) await publishMarketSignal();
       }, 30000);
@@ -187,7 +179,7 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// এডমিন থেকে সরাসরি গেমের পিরিয়ড ইনপুট নেওয়ার লজিক
+// এডমিন ইনপুট রিসিভার
 bot.on('message', (msg) => {
   if (msg.chat.id !== ADMIN_ID) return;
   if (msg.text && msg.text.startsWith('/')) return;
@@ -208,7 +200,7 @@ bot.on('message', (msg) => {
   }
 });
 
-// এরর অটো-হ্যান্ডলিং
+// এরর হ্যান্ডলিং
 bot.on('polling_error', (error) => {
   console.log(`Auto Recovered: ${error.code || error.message}`);
 });
