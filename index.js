@@ -2,7 +2,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const http = require('http');
 
 // কাস্টম সেটিংস
-const BOT_TOKEN = '8807448192:AAGLPS9RjBJZQ0Hfp6eZ13ADtm_7yHwulEs';
+const BOT_TOKEN = '8673480574:AAEsA9nmtP6ssnr77ISwjiY9TUb2iqbfyEo';
 const ADMIN_ID = 8514764458; // এডমিন আইডি
 
 // টার্গেট টেলিগ্রাম চ্যানেল
