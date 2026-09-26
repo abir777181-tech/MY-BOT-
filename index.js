@@ -103,7 +103,7 @@ bot.on('callback_query', async (query) => {
                               `🎯 **Upcoming Period:** \`${nextPeriod}\`\n` +
                               `📊 **Predicted Signal:** **${signal}**\n` +
                               `⏱ **Timeframe:** 30 Seconds\n\n` +
-                              `⚠️ *পরবর্তী রাউন্ড শুরু হওয়ার আগেই ট্রেড সেটিং প্রস্তুত রাখুন।*`;
+                              `⚠️ *7 স্টেপ মেনটেন করে গেমপ্লে করুন*`;
 
         try {
           await bot.sendMessage(CHANNEL_ID, signalMessage, { parse_mode: 'Markdown' });
