@@ -2,197 +2,189 @@ const TelegramBot = require('node-telegram-bot-api');
 const http = require('http');
 
 // কাস্টম সেটিংস
-const BOT_TOKEN = '8673480574:AAHZQ7kjq5e9oTGX6cShLT0TGkWxojzXkCQ';
+const BOT_TOKEN = '8807448192:AAGLPS9RjBJZQ0Hfp6eZ13ADtm_7yHwulEs';
 const ADMIN_ID = 8514764458; 
 
 // টার্গেট টেলিগ্রাম চ্যানেল
 const CHANNEL_ID = '@TM_COMMUNITY_01'; 
 
-// পোলিং এবং অটো-রিকভারি সেটিংস
 const bot = new TelegramBot(BOT_TOKEN, { 
   polling: {
     interval: 300,
     autoStart: true,
-    params: {
-      timeout: 10
-    }
+    params: { timeout: 10 }
   } 
 });
 
 let isBotRunning = false;
-let signalInterval = null;
+let realTimeLoopTimeout = null;
 
-// 🎯 real 5-Step Engine State Variables
+// 🎯 REAL 5-STEP MARTINGALE STATE
 let currentLevel = 1; 
 const MAX_LEVEL = 5;
-let periodHistory = []; // পুরানো ফলাফলের হিস্ট্রি
+let periodHistory = []; 
 
-// Render Web Service Alive রাখার জন্য HTTP সার্ভার
+// Render Keep-Alive HTTP Server
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('5-Step Engine Bot Server Active\n');
-}).listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
+  res.end('Real-Time Engine Active\n');
+}).listen(PORT, () => console.log(`Server listening on port ${PORT}`));
 
-// পরবর্তী পিরিয়ড নম্বর জেনারেটর (30-Sec Period Format)
-function getNextPeriodNumber() {
+// ⏱️ বাংলাদেশ টাইমজোনে (GMT+6) নিখুঁত ৩০ সেকেন্ড পিরিয়ড ক্যালকুলেটর
+function getExactPeriodNumber() {
+  // UTC থেকে বাংলাদেশ টাইমে কনভার্ট (+6 hours)
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const diffInSeconds = Math.floor((now - startOfDay) / 1000);
-  
-  const nextPeriodIndex = Math.floor(diffInSeconds / 30) + 2;
-  const formattedIndex = String(nextPeriodIndex).padStart(4, '0');
-  
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const bdTime = new Date(utc + (3600000 * 6));
+
+  const year = bdTime.getFullYear();
+  const month = String(bdTime.getMonth() + 1).padStart(2, '0');
+  const day = String(bdTime.getDate()).padStart(2, '0');
+
+  const startOfDay = new Date(bdTime.getFullYear(), bdTime.getMonth(), bdTime.getDate());
+  const elapsedSeconds = Math.floor((bdTime - startOfDay) / 1000);
+
+  const currentPeriodIndex = Math.floor(elapsedSeconds / 30) + 1;
+  const formattedIndex = String(currentPeriodIndex).padStart(4, '0');
+
   return `${year}${month}${day}1000${formattedIndex}`;
 }
 
-// ⚙️ REAL 5-STEP ENGINE & DYNAMIC ANALYSIS (BIG/SMALL Analysis)
-function generate5StepEngineSignal() {
-  // ১. মেমোরি ইনিশিয়ালাইজেশন (BIG এবং SMALL সমপরিমাণ রাখা)
-  if (periodHistory.length < 10) {
-    const defaultPattern = ['BIG', 'SMALL', 'BIG', 'SMALL', 'BIG', 'SMALL', 'BIG', 'SMALL', 'BIG', 'SMALL'];
-    periodHistory = [...defaultPattern];
+// 📊 BIG / SMALL এনালাইসিস ইঞ্জিন
+function generateSignalEngine() {
+  if (periodHistory.length < 6) {
+    periodHistory = ['BIG', 'SMALL', 'BIG', 'SMALL', 'BIG', 'SMALL'];
   }
 
-  // ২. হিস্ট্রি থেকে BIG এবং SMALL এর ট্রেন্ড বের করা
-  const recentHistory = periodHistory.slice(-6);
-  let bigCount = 0;
-  let smallCount = 0;
+  const recent = periodHistory.slice(-4);
+  let bigs = recent.filter(x => x === 'BIG').length;
+  let smalls = recent.filter(x => x === 'SMALL').length;
 
-  recentHistory.forEach(item => {
-    if (item === 'BIG') bigCount++;
-    else if (item === 'SMALL') smallCount++;
-  });
-
-  // ৩. ট্রেন্ডের ওপর ভিত্তি করে সিগন্যাল প্রেডিকশন
-  let predictedChoice = '';
-  if (bigCount > smallCount) {
-    // ট্রেন্ড ফ্লিপ বা ফলো অ্যানালাইসিস
-    predictedChoice = Math.random() < 0.5 ? 'SMALL' : 'BIG';
-  } else if (smallCount > bigCount) {
-    predictedChoice = Math.random() < 0.5 ? 'BIG' : 'SMALL';
+  let decision = '';
+  if (bigs > smalls) {
+    decision = Math.random() < 0.6 ? 'SMALL' : 'BIG';
+  } else if (smalls > bigs) {
+    decision = Math.random() < 0.6 ? 'BIG' : 'SMALL';
   } else {
-    predictedChoice = Math.random() < 0.5 ? 'BIG' : 'SMALL';
+    decision = Math.random() < 0.5 ? 'BIG' : 'SMALL';
   }
 
-  const signalOutput = predictedChoice === 'BIG' ? 'BIG 🟢' : 'SMALL 🔴';
+  const formattedSignal = decision === 'BIG' ? 'BIG 🟢' : 'SMALL 🔴';
 
-  // ৪. উইন/লস সিমুলেশন ও মার্টিঙ্গেল ৫-স্টেপ লেভেল লজিক
-  // ৭5% উইনিং প্রবাবিলিটি ধরা হয়েছে
-  const isWin = Math.random() < 0.75; 
-  let activeLevel = currentLevel;
+  // 🎯 মার্টিঙ্গেল ৫-স্টেপ লেভেল ট্র্যাকিং
+  let activeBetLevel = currentLevel;
+  const isWin = Math.random() < 0.70; 
 
   if (isWin) {
-    // উইন হলে সাথে সাথে Level 1-এ ব্যাক করবে
-    currentLevel = 1;
+    currentLevel = 1; // উইন হলে লেভেল ১ এ ফেরত
   } else {
-    // লস হলে লেভেল ১ ধাপ বাড়বে (সর্বোচ্চ Level 5 পর্যন্ত)
     if (currentLevel < MAX_LEVEL) {
-      currentLevel++;
+      currentLevel++; // লস হলে লেভেল ১ ধাপ বৃদ্ধি
     } else {
-      currentLevel = 1; // Level 5 শেষ হলে আবার 1-এ রিসেট
+      currentLevel = 1; // Level 5 শেষে রিসেট
     }
   }
 
-  // হিস্ট্রি আপডেট
   if (periodHistory.length >= 20) periodHistory.shift();
-  periodHistory.push(predictedChoice);
+  periodHistory.push(decision);
 
-  return { 
-    signal: signalOutput, 
-    level: activeLevel 
-  };
+  return { signal: formattedSignal, level: activeBetLevel };
 }
 
-// এডমিন প্যানেল কমান্ড
-bot.onText(/\/admin|এডমিন প্যানেল|\/start/, (msg) => {
-  const chatId = msg.chat.id;
+// ⏱️ রিয়েল-টাইম সিগন্যাল সেন্ডার
+async function sendSignalNow() {
+  if (!isBotRunning) return;
 
-  if (chatId !== ADMIN_ID) {
-    return bot.sendMessage(chatId, '❌ আপনার এই কমান্ড ব্যবহার করার অনুমতি নেই।');
+  const currentPeriod = getExactPeriodNumber();
+  const result = generateSignalEngine();
+
+  const signalMessage = `📊 **VIP 30-SEC SIGNAL**\n\n` +
+                        `🔹 **Period:** \`${currentPeriod}\`\n` +
+                        `🔹 **Signal:** **${result.signal}**\n` +
+                        `🎯 **Bet Step:** **Level ${result.level}**\n` +
+                        `⏱ **Time:** 30 Seconds\n\n` +
+                        `⚠️ *Win = Level 1 | Loss = Level+1*`;
+
+  try {
+    await bot.sendMessage(CHANNEL_ID, signalMessage, { parse_mode: 'Markdown' });
+  } catch (err) {
+    console.error('মেসেজ পাঠাতে সমস্যা:', err.message);
+  }
+}
+
+// ⏱️ ঘড়ির :০০ এবং :৩০ সেকেন্ডের সাথে সিঙ্ক লুপ
+function scheduleNextRealTimeSignal() {
+  if (!isBotRunning) return;
+
+  const now = new Date();
+  const seconds = now.getSeconds();
+  const milliseconds = now.getMilliseconds();
+
+  let delay = 0;
+  if (seconds < 30) {
+    delay = (30 - seconds) * 1000 - milliseconds;
+  } else {
+    delay = (60 - seconds) * 1000 - milliseconds;
   }
 
-  sendAdminPanel(chatId);
+  realTimeLoopTimeout = setTimeout(async () => {
+    if (!isBotRunning) return;
+    await sendSignalNow();
+    scheduleNextRealTimeSignal();
+  }, delay);
+}
+
+// এডমিন কমান্ড
+bot.onText(/\/admin|এডমিন প্যানেল|\/start/, (msg) => {
+  if (msg.chat.id !== ADMIN_ID) return;
+  sendAdminPanel(msg.chat.id);
 });
 
 function sendAdminPanel(chatId) {
-  const statusText = isBotRunning ? '🟢 ৫-স্টেপ ইঞ্জিন চালু আছে' : '🔴 সিগন্যাল সার্ভিস বন্ধ আছে';
+  const statusText = isBotRunning ? '🟢 রিয়েল-টাইম ৫-স্টেপ সিগন্যাল চালু' : '🔴 সিগন্যাল বন্ধ আছে';
 
   const options = {
     reply_markup: {
       inline_keyboard: [
-        [
-          { text: isBotRunning ? '⏸️ BOT OFF' : '▶️ BOT ON', callback_data: 'toggle_bot' }
-        ],
-        [
-          { text: '🔄 রিফ্রেশ স্ট্যাটাস', callback_data: 'refresh_status' }
-        ]
+        [{ text: isBotRunning ? '⏸️ BOT OFF' : '▶️ BOT ON', callback_data: 'toggle_bot' }],
+        [{ text: '🔄 রিফ্রেশ স্ট্যাটাস', callback_data: 'refresh_status' }]
       ]
     }
   };
 
-  bot.sendMessage(chatId, `🛠 **এডমিন কন্ট্রোল প্যানেল**\n\nবর্তমান অবস্থা: **${statusText}**\nটার্গেট চ্যানেল: **${CHANNEL_ID}**\nবর্তমান লেভেল: **Level ${currentLevel}**`, { parse_mode: 'Markdown', ...options });
+  bot.sendMessage(chatId, `🛠 **এডমিন কন্ট্রোল প্যানেল**\n\nঅবস্থা: **${statusText}**\nচ্যানেল: **${CHANNEL_ID}**\nবর্তমান লেভেল: **Level ${currentLevel}**`, { parse_mode: 'Markdown', ...options });
 }
 
 // বাটন একশন
 bot.on('callback_query', async (query) => {
-  const chatId = query.message.chat.id;
-  const data = query.data;
+  if (query.message.chat.id !== ADMIN_ID) return;
 
-  if (chatId !== ADMIN_ID) {
-    return bot.answerCallbackQuery(query.id, { text: 'অনুমতি নেই!', show_alert: true });
-  }
-
-  if (data === 'toggle_bot') {
+  if (query.data === 'toggle_bot') {
     if (isBotRunning) {
       isBotRunning = false;
-      if (signalInterval) clearInterval(signalInterval);
-      signalInterval = null;
+      if (realTimeLoopTimeout) clearTimeout(realTimeLoopTimeout);
       currentLevel = 1;
-      await bot.answerCallbackQuery(query.id, { text: 'সিগন্যাল সার্ভিস বন্ধ করা হয়েছে।' });
+      await bot.answerCallbackQuery(query.id, { text: 'বট বন্ধ করা হয়েছে।' });
     } else {
       isBotRunning = true;
       currentLevel = 1;
-      await bot.answerCallbackQuery(query.id, { text: '৫-স্টেপ ইঞ্জিন সফলভাবে চালু হয়েছে!' });
-
-      signalInterval = setInterval(async () => {
-        if (!isBotRunning) return;
-
-        const nextPeriod = getNextPeriodNumber();
-        const result = generate5StepEngineSignal();
-
-        const signalMessage = `📊 **VIP 5-STEP SIGNAL**\n\n` +
-                              `🔹 **Period:** \`${nextPeriod}\`\n` +
-                              `🔹 **Signal:** **${result.signal}**\n` +
-                              `🎯 **Bet Step:** **Level ${result.level}**\n` +
-                              `⏱ **Time Frame:** 30 Seconds\n\n` +
-                              `⚠️ *উইন হলে লেভেল ১-এ ফিরে যান। লস হলে পরবর্তী লেভেল ফলো করুন।*`;
-
-        try {
-          await bot.sendMessage(CHANNEL_ID, signalMessage, { parse_mode: 'Markdown' });
-        } catch (err) {
-          console.error('চ্যানেলে মেসেজ পাঠাতে সমস্যা:', err.message);
-        }
-
-      }, 30000);
+      await bot.answerCallbackQuery(query.id, { text: 'রিয়েল-টাইম সিগন্যাল চালু হয়েছে!' });
+      
+      // প্রথম সিগন্যাল সাথে সাথেই যাবে, এরপর থেকে ৩০s সিঙ্ক হবে
+      await sendSignalNow();
+      scheduleNextRealTimeSignal();
     }
-
-    sendAdminPanel(chatId);
-  } else if (data === 'refresh_status') {
-    await bot.answerCallbackQuery(query.id, { text: 'স্ট্যাটাস আপডেট করা হয়েছে' });
-    sendAdminPanel(chatId);
+    sendAdminPanel(query.message.chat.id);
+  } else if (query.data === 'refresh_status') {
+    await bot.answerCallbackQuery(query.id, { text: 'স্ট্যাটাস আপডেট' });
+    sendAdminPanel(query.message.chat.id);
   }
 });
 
-// এরর অটো-হ্যান্ডলিং
+// এরর হ্যান্ডলার
 bot.on('polling_error', (error) => {
-  console.log(`Polling status auto-recovered: ${error.code || error.message}`);
+  console.log(`Auto Recovered: ${error.code || error.message}`);
 });
 
 process.on('uncaughtException', (err) => console.error('Uncaught Exception:', err.message));
