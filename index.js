@@ -1,11 +1,11 @@
 const TelegramBot = require('node-telegram-bot-api');
 const http = require('http');
 
-// কাস্টম সেটিংস
+// 🔑 নতুন টোকেন ও এডমিন আইডি
 const BOT_TOKEN = '8673480574:AAHZQ7kjq5e9oTGX6cShLT0TGkWxojzXkCQ';
 const ADMIN_ID = 8514764458; 
 
-// টার্গেট টেলিগ্রাম চ্যানেল
+// 🎯 টার্গেট টেলিগ্রাম চ্যানেল
 const CHANNEL_ID = '@TM_COMMUNITY_01'; 
 
 const bot = new TelegramBot(BOT_TOKEN, { 
@@ -19,19 +19,20 @@ const bot = new TelegramBot(BOT_TOKEN, {
 let isBotRunning = false;
 let realTimeLoopTimeout = null;
 
-// 🎯 REAL 5-STEP MARTINGALE STATE
+// 🎯 5-STEP MARTINGALE STATE & PERIOD SHIFT
 let currentLevel = 1; 
 const MAX_LEVEL = 5;
 let periodHistory = []; 
+let customPeriodOffset = 0; // গেম পিরিয়ড সিঙ্ক করার অফসেট
 
 // Render Keep-Alive HTTP Server
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Game-Synced Real-Time Engine Active\n');
+  res.end('5-Step Real-Time Engine Active\n');
 }).listen(PORT, () => console.log(`Server listening on port ${PORT}`));
 
-// ⏱️ গেমের পিরিয়ড নম্বর বের করার নিখুঁত ফাংশন (বাংলাদেশ সময় ও নেক্সট পিরিয়ড সিঙ্ক)
+// ⏱️ গেমের পিরিয়ড নম্বর জেনারেটর (BD Time + 30s Real Clock Offset)
 function getExactPeriodNumber() {
   const now = new Date();
   
@@ -43,18 +44,20 @@ function getExactPeriodNumber() {
   const month = String(bdTime.getMonth() + 1).padStart(2, '0');
   const day = String(bdTime.getDate()).padStart(2, '0');
 
-  // রাত 00:00:00BD Time
+  // রাত 00:00:00 BD Time থেকে সেকেন্ড গণনা
   const startOfDay = new Date(bdTime.getFullYear(), bdTime.getMonth(), bdTime.getDate(), 0, 0, 0);
   const elapsedSeconds = Math.floor((bdTime - startOfDay) / 1000);
 
-  // বর্তমান ৩০-সেকেন্ডের পিরিয়ড + ১ (যাতে সিগন্যাল আসার পর ইউজার ট্রেড ধরার সুযোগ পায়)
-  const nextPeriodIndex = Math.floor(elapsedSeconds / 30) + 1;
-  const formattedIndex = String(nextPeriodIndex).padStart(4, '0');
+  // প্রতি ৩০ সেকেন্ডে ১টি পিরিয়ড + অফসেট
+  let currentPeriodIndex = Math.floor(elapsedSeconds / 30) + 1 + customPeriodOffset;
+  if (currentPeriodIndex < 1) currentPeriodIndex = 1;
+
+  const formattedIndex = String(currentPeriodIndex).padStart(4, '0');
 
   return `${year}${month}${day}1000${formattedIndex}`;
 }
 
-// 📊 BIG / SMALL এনালাইসিস ইঞ্জিন
+// 📊 BIG / SMALL এনালাইসিস ইঞ্জিন (৫-স্টেপ ট্র্যাকিং)
 function generateSignalEngine() {
   if (periodHistory.length < 6) {
     periodHistory = ['BIG', 'SMALL', 'BIG', 'SMALL', 'BIG', 'SMALL'];
@@ -75,17 +78,17 @@ function generateSignalEngine() {
 
   const formattedSignal = decision === 'BIG' ? 'BIG 🟢' : 'SMALL 🔴';
 
-  // 🎯 মার্টিঙ্গেল ৫-স্টেপ লেভেল ট্র্যাকিং
+  // 🎯 মার্টিঙ্গেল ৫-স্টেপ লজিক (Win = Level 1, Loss = Level + 1)
   let activeBetLevel = currentLevel;
   const isWin = Math.random() < 0.70; 
 
   if (isWin) {
-    currentLevel = 1; // উইন হলে লেভেল ১ এ ফেরত
+    currentLevel = 1; 
   } else {
     if (currentLevel < MAX_LEVEL) {
-      currentLevel++; // লস হলে লেভেল ১ ধাপ বৃদ্ধি
+      currentLevel++; 
     } else {
-      currentLevel = 1; // Level 5 শেষে রিসেট
+      currentLevel = 1; 
     }
   }
 
@@ -95,19 +98,19 @@ function generateSignalEngine() {
   return { signal: formattedSignal, level: activeBetLevel };
 }
 
-// ⏱️ রিয়েল-টাইম সিগন্যাল সেন্ডার
+// ⏱️ সিগন্যাল পোস্ট ফাংশন
 async function sendSignalNow() {
   if (!isBotRunning) return;
 
   const currentPeriod = getExactPeriodNumber();
   const result = generateSignalEngine();
 
-  const signalMessage = `📊 **VIP 30-SEC SIGNAL**\n\n` +
+  const signalMessage = `📊 **VIP 5-STEP 30s SIGNAL**\n\n` +
                         `🔹 **Period:** \`${currentPeriod}\`\n` +
                         `🔹 **Signal:** **${result.signal}**\n` +
                         `🎯 **Bet Step:** **Level ${result.level}**\n` +
                         `⏱ **Time Frame:** 30 Seconds\n\n` +
-                        `⚠️ *Win = Reset Level 1 | Loss = Level+1*`;
+                        `⚠️ *Win = Level 1 | Loss = Level+1 (Max Step 5)*`;
 
   try {
     await bot.sendMessage(CHANNEL_ID, signalMessage, { parse_mode: 'Markdown' });
@@ -116,7 +119,7 @@ async function sendSignalNow() {
   }
 }
 
-// ⏱️ ঘড়ির :০০ এবং :৩০ সেকেন্ডের ৫ সেকেন্ড আগে (২০/৫০ সেকেন্ডে) সিগন্যাল পোস্ট লুপ
+// ⏱️ ঘড়ির :০০ এবং :৩০ সেকেন্ডের সাথে নিখুঁত সিঙ্ক লুপ
 function scheduleNextRealTimeSignal() {
   if (!isBotRunning) return;
 
@@ -124,7 +127,6 @@ function scheduleNextRealTimeSignal() {
   const seconds = now.getSeconds();
   const milliseconds = now.getMilliseconds();
 
-  // প্রতি ৩০ সেকেন্ডের আগেই সিগন্যাল পুশ করার জন্য নিখুঁত টাইমিং হিসাব
   let delay = 0;
   if (seconds < 30) {
     delay = (30 - seconds) * 1000 - milliseconds;
@@ -152,15 +154,20 @@ function sendAdminPanel(chatId) {
     reply_markup: {
       inline_keyboard: [
         [{ text: isBotRunning ? '⏸️ BOT OFF' : '▶️ BOT ON', callback_data: 'toggle_bot' }],
+        [
+          { text: '➕ পিরিয়ড +১ বাড়াও', callback_data: 'period_plus' },
+          { text: '➖ পিরিয়ড -১ কমাও', callback_data: 'period_minus' }
+        ],
         [{ text: '🔄 রিফ্রেশ স্ট্যাটাস', callback_data: 'refresh_status' }]
       ]
     }
   };
 
-  bot.sendMessage(chatId, `🛠 **এডমিন কন্ট্রোল প্যানেল**\n\nঅবস্থা: **${statusText}**\nচ্যানেল: **${CHANNEL_ID}**\nবর্তমান লেভেল: **Level ${currentLevel}**`, { parse_mode: 'Markdown', ...options });
+  const currentPeriod = getExactPeriodNumber();
+  bot.sendMessage(chatId, `🛠 **এডমিন কন্ট্রোল প্যানেল**\n\nঅবস্থা: **${statusText}**\nচ্যানেল: **${CHANNEL_ID}**\nবর্তমান লেভেল: **Level ${currentLevel}**\nবটের পিরিয়ড: \`${currentPeriod}\`\n(গেমের সাথে না মিললে ➕/➖ চাপুন)`, { parse_mode: 'Markdown', ...options });
 }
 
-// বাটন একশন
+// বাটন হ্যান্ডলার
 bot.on('callback_query', async (query) => {
   if (query.message.chat.id !== ADMIN_ID) return;
 
@@ -173,11 +180,19 @@ bot.on('callback_query', async (query) => {
     } else {
       isBotRunning = true;
       currentLevel = 1;
-      await bot.answerCallbackQuery(query.id, { text: 'গেমের সাথে সিঙ্ক হয়ে সিগন্যাল চালু হয়েছে!' });
+      await bot.answerCallbackQuery(query.id, { text: '৫-স্টেপ সিগন্যাল চালু হয়েছে!' });
       
       await sendSignalNow();
       scheduleNextRealTimeSignal();
     }
+    sendAdminPanel(query.message.chat.id);
+  } else if (query.data === 'period_plus') {
+    customPeriodOffset += 1;
+    await bot.answerCallbackQuery(query.id, { text: 'পিরিয়ড ১ বাড়ানো হয়েছে' });
+    sendAdminPanel(query.message.chat.id);
+  } else if (query.data === 'period_minus') {
+    customPeriodOffset -= 1;
+    await bot.answerCallbackQuery(query.id, { text: 'পিরিয়ড ১ কমানো হয়েছে' });
     sendAdminPanel(query.message.chat.id);
   } else if (query.data === 'refresh_status') {
     await bot.answerCallbackQuery(query.id, { text: 'স্ট্যাটাস আপডেট' });
@@ -185,7 +200,7 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// এরর হ্যান্ডলার
+// এরর অটো-হ্যান্ডলিং
 bot.on('polling_error', (error) => {
   console.log(`Auto Recovered: ${error.code || error.message}`);
 });
