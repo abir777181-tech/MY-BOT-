@@ -138,7 +138,7 @@ bot.on('callback_query', async (query) => {
                               `🔹 **Period:** \`${nextPeriod}\`\n` +
                               `🔹 **Signal:** **${signal}**\n` +
                               `⏱ **Time Frame:** 30 Seconds\n\n` +
-                              `⚠️ *ঝুঁকি বিবেচনা করে ট্রেড করুন।*`;
+                              `⚠️ *7 STEP FLOWW NOW*`;
 
         try {
           await bot.sendMessage(CHANNEL_ID, signalMessage, { parse_mode: 'Markdown' });
