@@ -3,7 +3,7 @@ const http = require('http');
 
 // কাস্টম সেটিংস
 const BOT_TOKEN = '8807448192:AAGLPS9RjBJZQ0Hfp6eZ13ADtm_7yHwulEs';
-const ADMIN_ID = 8514764458; // নতুন এডমিন আইডি আপডেট করা হয়েছে
+const ADMIN_ID = 8514764458; // আপনার এডমিন আইডি
 
 // টার্গেট টেলিগ্রাম চ্যানেল
 const CHANNEL_ID = '@TM_COMMUNITY_01'; 
@@ -22,8 +22,8 @@ http.createServer((req, res) => {
   console.log(`Server listening on port ${PORT}`);
 });
 
-// পিরিয়ড নম্বর জেনারেটর (৩০ সেকেন্ড পরপর নতুন পিরিয়ড তৈরি করবে)
-function generatePeriodNumber() {
+// পরবর্তী (NEXT / UPCOMING) পিরিয়ড নম্বর জেনারেটর
+function getNextPeriodNumber() {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -31,19 +31,21 @@ function generatePeriodNumber() {
   
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const diffInSeconds = Math.floor((now - startOfDay) / 1000);
-  const periodIndex = Math.floor(diffInSeconds / 30) + 1;
-  const formattedIndex = String(periodIndex).padStart(4, '0');
+  
+  // পরবর্তী ৩০ সেকেন্ড রাউন্ডের ইনডেক্স (+২ ব্যবহার করে পরবর্তী পিরিয়ড নিশ্চিত করা হচ্ছে)
+  const nextPeriodIndex = Math.floor(diffInSeconds / 30) + 2;
+  const formattedIndex = String(nextPeriodIndex).padStart(4, '0');
   
   return `${year}${month}${day}1000${formattedIndex}`;
 }
 
-// র‍্যান্ডম সিগন্যাল জেনারেটর
-function getRandomSignal() {
+// প্রেডিকশন সিগন্যাল জেনারেটর
+function getPredictionSignal() {
   const choices = ['BIG 🟢', 'SMALL 🔴'];
   return choices[Math.floor(Math.random() * choices.length)];
 }
 
-// এডমিন কমান্ড (/admin বা 'এডমিন প্যানেল')
+// এডমিন কমান্ড
 bot.onText(/\/admin|এডমিন প্যানেল/, (msg) => {
   const chatId = msg.chat.id;
 
@@ -55,7 +57,7 @@ bot.onText(/\/admin|এডমিন প্যানেল/, (msg) => {
 });
 
 function sendAdminPanel(chatId) {
-  const statusText = isBotRunning ? '🟢 সিগন্যাল এখন চ্যানেলে পাঠানো হচ্ছে' : '🔴 সিগন্যাল সার্ভিস বন্ধ আছে';
+  const statusText = isBotRunning ? '🟢 পরবর্তী রাউন্ডের প্রেডিকশন চালু আছে' : '🔴 সার্ভিস বন্ধ আছে';
 
   const options = {
     reply_markup: {
@@ -87,26 +89,26 @@ bot.on('callback_query', async (query) => {
       isBotRunning = false;
       clearInterval(signalInterval);
       signalInterval = null;
-      bot.answerCallbackQuery(query.id, { text: 'চ্যানেলে সিগন্যাল পাঠানো বন্ধ করা হয়েছে।' });
+      bot.answerCallbackQuery(query.id, { text: 'সিগন্যাল প্রেডিকশন বন্ধ করা হয়েছে।' });
     } else {
       isBotRunning = true;
-      bot.answerCallbackQuery(query.id, { text: 'চ্যানেলে অটো সিগন্যাল পাঠানো শুরু হয়েছে!' });
+      bot.answerCallbackQuery(query.id, { text: 'পরবর্তী রাউন্ডের অটো প্রেডিকশন শুরু হয়েছে!' });
 
-      // প্রতি ৩০ সেকেন্ড পর পর চ্যানেলে সিগন্যাল পোস্ট হবে
+      // প্রতি ৩০ সেকেন্ড পর পর পরবর্তী পিরিয়ডের জন্য প্রেডিকশন পাঠানো হবে
       signalInterval = setInterval(async () => {
-        const periodNumber = generatePeriodNumber();
-        const signal = getRandomSignal();
+        const nextPeriod = getNextPeriodNumber();
+        const signal = getPredictionSignal();
 
-        const signalMessage = `📊 **VIP SIGNAL UPDATE**\n\n` +
-                              `🔹 **Period:** \`${periodNumber}\`\n` +
-                              `🔹 **Signal:** **${signal}**\n` +
-                              `⏱ **Time Frame:** 30 Seconds\n\n` +
-                              `⚠️ *ঝুঁকি বিবেচনা করে ট্রেড করুন।*`;
+        const signalMessage = `🔮 **NEXT ROUND PREDICTION**\n\n` +
+                              `🎯 **Upcoming Period:** \`${nextPeriod}\`\n` +
+                              `📊 **Predicted Signal:** **${signal}**\n` +
+                              `⏱ **Timeframe:** 30 Seconds\n\n` +
+                              `⚠️ *পরবর্তী রাউন্ড শুরু হওয়ার আগেই ট্রেড সেটিং প্রস্তুত রাখুন।*`;
 
         try {
           await bot.sendMessage(CHANNEL_ID, signalMessage, { parse_mode: 'Markdown' });
         } catch (err) {
-          console.error('চ্যানেলে সিগন্যাল পাঠাতে ব্যর্থ:', err.message);
+          console.error('চ্যানেলে পোস্ট পাঠাতে সমস্যা:', err.message);
         }
 
       }, 30000);
@@ -118,4 +120,3 @@ bot.on('callback_query', async (query) => {
     sendAdminPanel(chatId);
   }
 });
-                              
