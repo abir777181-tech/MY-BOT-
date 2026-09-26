@@ -3,7 +3,7 @@ const http = require('http');
 
 // কাস্টম সেটিংস
 const BOT_TOKEN = '8807448192:AAGLPS9RjBJZQ0Hfp6eZ13ADtm_7yHwulEs';
-const ADMIN_ID = 8514764458; // আপনার নতুন এডমিন আইডি
+const ADMIN_ID = 8514764458; // এডমিন আইডি
 
 // টার্গেট টেলিগ্রাম চ্যানেল
 const CHANNEL_ID = '@TM_COMMUNITY_01'; 
@@ -13,7 +13,7 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 let isBotRunning = false;
 let signalInterval = null;
 
-// লাস্ট ১০টি পিরিয়ডের হিস্ট্রি ট্র্যাক করার মেমোরি এরে
+// লাস্ট ১০টি পিরিয়ডের হিস্ট্রি ট্র্যাক করার মেমোরি
 let periodHistory = [];
 
 // সার্ভার চালু রাখা (Render Web Service-এর জন্য প্রয়োজনীয়)
@@ -41,9 +41,8 @@ function getNextPeriodNumber() {
   return `${year}${month}${day}1000${formattedIndex}`;
 }
 
-// 📊 ১০টি পিরিয়ড এনালাইসিস ইঞ্জিন (10-Round Trend & Probability Engine)
+// 📊 ১০টি পিরিয়ড এনালাইসিস ইঞ্জিন
 function analyzeLast10Rounds() {
-  // হিস্টোরি খালি থাকলে বা ১০টির কম হলে প্রাথমিক মেমোরি পপুলেট করা
   if (periodHistory.length < 10) {
     const defaultChoices = ['BIG', 'SMALL'];
     while (periodHistory.length < 10) {
@@ -60,35 +59,24 @@ function analyzeLast10Rounds() {
   });
 
   let predictedSignal = '';
-  let analysisStrategy = '';
 
-  // ১. ড্রাগন ট্রেন্ড লজিক (৭০%+ একই রেজাল্ট থাকলে ট্রেন্ড ফলো করবে)
   if (bigCount >= 7) {
     predictedSignal = 'BIG 🟢';
-    analysisStrategy = 'Dragon Trend Follower';
   } else if (smallCount >= 7) {
     predictedSignal = 'SMALL 🔴';
-    analysisStrategy = 'Dragon Trend Follower';
-  } 
-  // ২. ব্যালেন্স ও রিভার্সাল এনালাইসিস (গড় অনুপাত থেকে সম্ভাবনা হিসাব)
-  else if (bigCount > smallCount) {
+  } else if (bigCount > smallCount) {
     predictedSignal = 'SMALL 🔴';
-    analysisStrategy = '10-Round Reversal Analysis';
   } else if (smallCount > bigCount) {
     predictedSignal = 'BIG 🟢';
-    analysisStrategy = '10-Round Reversal Analysis';
   } else {
-    // ৩. ৫০-৫০ সমতা থাকলে র‍্যান্ডম সিগন্যাল
     predictedSignal = Math.random() > 0.5 ? 'BIG 🟢' : 'SMALL 🔴';
-    analysisStrategy = 'Probability Ratio Equilibrium';
   }
 
-  // মেমোরি আপডেট: পরবর্তী রাউন্ডের জন্য হিস্টোরি শিফট করা (সর্বোচ্চ ১০টি সংরক্ষণ)
   const rawChoice = predictedSignal.includes('BIG') ? 'BIG' : 'SMALL';
   periodHistory.shift();
   periodHistory.push(rawChoice);
 
-  return { signal: predictedSignal, strategy: analysisStrategy, bigRatio: bigCount, smallRatio: smallCount };
+  return predictedSignal;
 }
 
 // এডমিন কমান্ড
@@ -103,7 +91,7 @@ bot.onText(/\/admin|এডমিন প্যানেল/, (msg) => {
 });
 
 function sendAdminPanel(chatId) {
-  const statusText = isBotRunning ? '🟢 ১০-রাউন্ড এনালাইসিস সিগন্যাল চালু আছে' : '🔴 সার্ভিস বন্ধ আছে';
+  const statusText = isBotRunning ? '🟢 সিগন্যাল এখন চ্যানেলে পাঠানো হচ্ছে' : '🔴 সিগন্যাল সার্ভিস বন্ধ আছে';
 
   const options = {
     reply_markup: {
@@ -135,23 +123,22 @@ bot.on('callback_query', async (query) => {
       isBotRunning = false;
       clearInterval(signalInterval);
       signalInterval = null;
-      bot.answerCallbackQuery(query.id, { text: 'সিগন্যাল এনালাইসিস বন্ধ করা হয়েছে।' });
+      bot.answerCallbackQuery(query.id, { text: 'চ্যানেলে সিগন্যাল পাঠানো বন্ধ করা হয়েছে।' });
     } else {
       isBotRunning = true;
-      bot.answerCallbackQuery(query.id, { text: '১০-রাউন্ড এনালাইসিস সহ সিগন্যাল চালু হয়েছে!' });
+      bot.answerCallbackQuery(query.id, { text: 'চ্যানেলে অটো সিগন্যাল পাঠানো শুরু হয়েছে!' });
 
-      // প্রতি ৩০ সেকেন্ড পর পর এনালাইসিস ভিত্তিক সিগন্যাল পাঠানো
+      // প্রতি ৩০ সেকেন্ড পর পর সিগন্যাল পোস্ট
       signalInterval = setInterval(async () => {
         const nextPeriod = getNextPeriodNumber();
-        const analysis = analyzeLast10Rounds();
+        const signal = analyzeLast10Rounds();
 
-        const signalMessage = `📊 **HIGH PROBABILITY PREDICTION**\n\n` +
-                              `🎯 **Upcoming Period:** \`${nextPeriod}\`\n` +
-                              `🔮 **Predicted Signal:** **${analysis.signal}**\n` +
-                              `📈 **10-Round Stats:** BIG [${analysis.bigRatio}] | SMALL [${analysis.smallRatio}]\n` +
-                              `💡 **Analysis Strategy:** _${analysis.strategy}_\n` +
-                              `⏱ **Timeframe:** 30 Seconds\n\n` +
-                              `🎰 *7 স্টেপ মেনটেন করে গেইম খেলুন*`;
+        // আপনার পছন্দের আগের মেসেজ ফরম্যাট
+        const signalMessage = `📊 **VIP SIGNAL UPDATE**\n\n` +
+                              `🔹 **Period:** \`${nextPeriod}\`\n` +
+                              `🔹 **Signal:** **${signal}**\n` +
+                              `⏱ **Time Frame:** 30 Seconds\n\n` +
+                              `⚠️ *ঝুঁকি বিবেচনা করে ট্রেড করুন।*`;
 
         try {
           await bot.sendMessage(CHANNEL_ID, signalMessage, { parse_mode: 'Markdown' });
