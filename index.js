@@ -28,13 +28,14 @@ let periodHistory = [];
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Real-Time Engine Active\n');
+  res.end('Game-Synced Real-Time Engine Active\n');
 }).listen(PORT, () => console.log(`Server listening on port ${PORT}`));
 
-// ⏱️ বাংলাদেশ টাইমজোনে (GMT+6) নিখুঁত ৩০ সেকেন্ড পিরিয়ড ক্যালকুলেটর
+// ⏱️ গেমের পিরিয়ড নম্বর বের করার নিখুঁত ফাংশন (বাংলাদেশ সময় ও নেক্সট পিরিয়ড সিঙ্ক)
 function getExactPeriodNumber() {
-  // UTC থেকে বাংলাদেশ টাইমে কনভার্ট (+6 hours)
   const now = new Date();
+  
+  // Bangladesh Time (+6 GMT)
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   const bdTime = new Date(utc + (3600000 * 6));
 
@@ -42,11 +43,13 @@ function getExactPeriodNumber() {
   const month = String(bdTime.getMonth() + 1).padStart(2, '0');
   const day = String(bdTime.getDate()).padStart(2, '0');
 
-  const startOfDay = new Date(bdTime.getFullYear(), bdTime.getMonth(), bdTime.getDate());
+  // রাত 00:00:00BD Time
+  const startOfDay = new Date(bdTime.getFullYear(), bdTime.getMonth(), bdTime.getDate(), 0, 0, 0);
   const elapsedSeconds = Math.floor((bdTime - startOfDay) / 1000);
 
-  const currentPeriodIndex = Math.floor(elapsedSeconds / 30) + 1;
-  const formattedIndex = String(currentPeriodIndex).padStart(4, '0');
+  // বর্তমান ৩০-সেকেন্ডের পিরিয়ড + ১ (যাতে সিগন্যাল আসার পর ইউজার ট্রেড ধরার সুযোগ পায়)
+  const nextPeriodIndex = Math.floor(elapsedSeconds / 30) + 1;
+  const formattedIndex = String(nextPeriodIndex).padStart(4, '0');
 
   return `${year}${month}${day}1000${formattedIndex}`;
 }
@@ -103,8 +106,8 @@ async function sendSignalNow() {
                         `🔹 **Period:** \`${currentPeriod}\`\n` +
                         `🔹 **Signal:** **${result.signal}**\n` +
                         `🎯 **Bet Step:** **Level ${result.level}**\n` +
-                        `⏱ **Time:** 30 Seconds\n\n` +
-                        `⚠️ *Win = Level 1 | Loss = Level+1*`;
+                        `⏱ **Time Frame:** 30 Seconds\n\n` +
+                        `⚠️ *Win = Reset Level 1 | Loss = Level+1*`;
 
   try {
     await bot.sendMessage(CHANNEL_ID, signalMessage, { parse_mode: 'Markdown' });
@@ -113,7 +116,7 @@ async function sendSignalNow() {
   }
 }
 
-// ⏱️ ঘড়ির :০০ এবং :৩০ সেকেন্ডের সাথে সিঙ্ক লুপ
+// ⏱️ ঘড়ির :০০ এবং :৩০ সেকেন্ডের ৫ সেকেন্ড আগে (২০/৫০ সেকেন্ডে) সিগন্যাল পোস্ট লুপ
 function scheduleNextRealTimeSignal() {
   if (!isBotRunning) return;
 
@@ -121,6 +124,7 @@ function scheduleNextRealTimeSignal() {
   const seconds = now.getSeconds();
   const milliseconds = now.getMilliseconds();
 
+  // প্রতি ৩০ সেকেন্ডের আগেই সিগন্যাল পুশ করার জন্য নিখুঁত টাইমিং হিসাব
   let delay = 0;
   if (seconds < 30) {
     delay = (30 - seconds) * 1000 - milliseconds;
@@ -169,9 +173,8 @@ bot.on('callback_query', async (query) => {
     } else {
       isBotRunning = true;
       currentLevel = 1;
-      await bot.answerCallbackQuery(query.id, { text: 'রিয়েল-টাইম সিগন্যাল চালু হয়েছে!' });
+      await bot.answerCallbackQuery(query.id, { text: 'গেমের সাথে সিঙ্ক হয়ে সিগন্যাল চালু হয়েছে!' });
       
-      // প্রথম সিগন্যাল সাথে সাথেই যাবে, এরপর থেকে ৩০s সিঙ্ক হবে
       await sendSignalNow();
       scheduleNextRealTimeSignal();
     }
