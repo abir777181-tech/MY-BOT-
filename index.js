@@ -5,7 +5,7 @@ const http = require('http');
 const BOT_TOKEN = '8807448192:AAGLPS9RjBJZQ0Hfp6eZ13ADtm_7yHwulEs';
 const ADMIN_ID = 8514764458; 
 
-// টার্গেট টেলিগ্রাম চ্যানেল
+// টার্গেট টেলিগ্রাম চ্যানেল (আন্ডারস্কোর সহ সঠিক ইউজারনেম)
 const CHANNEL_ID = '@TM_COMMUNITY_01'; 
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
@@ -13,21 +13,23 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 let isBotRunning = false;
 let signalInterval = null;
 
-// ডায়নামিক হিস্ট্রি মেমোরি ও ৫-স্টেপ মার্টিংগেল ট্র্যাকিং
+// ডায়নামিক হিস্ট্রি মেমোরি ও ৫-স্টেপ ট্র্যাকিং
 let periodHistory = [];
 let currentLevel = 1; 
 const MAX_LEVEL = 5;
 
-// সার্ভার চালু রাখা (Render Web Service-এর জন্য প্রয়োজনীয়)
+// সার্ভার চালু রাখা (Render Sleep সমস্যা দূর করার জন্য)
 const PORT = process.env.PORT || 3000;
-http.createServer((req, res) => {
+const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Bot is active!\n');
-}).listen(PORT, () => {
+  res.end('Bot is Active & Running!\n');
+});
+
+server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
 
-// পরবর্তী (NEXT / UPCOMING) পিরিয়ড নম্বর জেনারেটর
+// পরবর্তী পিরিয়ড নম্বর জেনারেটর
 function getNextPeriodNumber() {
   const now = new Date();
   const year = now.getFullYear();
@@ -45,7 +47,6 @@ function getNextPeriodNumber() {
 
 // 📊 ডায়নামিক হিস্ট্রি এনালাইসিস এবং ৫-স্টেপ উইন ইঞ্জিন
 function generateDynamicSmartSignal() {
-  // মেমোরিতে প্রয়োজন অনুযায়ী অন্তত ১৫টি হিস্ট্রি ডাটা বজায় রাখা
   if (periodHistory.length < 15) {
     const defaultChoices = ['BIG', 'SMALL'];
     while (periodHistory.length < 15) {
@@ -53,16 +54,7 @@ function generateDynamicSmartSignal() {
     }
   }
 
-  // মার্কেট কন্ডিশন অনুযায়ী এনালাইসিস স্কোপ নির্ধারণ (৫ থেকে ১৫টি রাউন্ড)
-  let requiredHistoryDepth = 10;
-  if (currentLevel >= 3) {
-    requiredHistoryDepth = 15; // উচ্চ লেভেলে দীর্ঘ হিস্ট্রি এনালাইসিস করে সিদ্ধান্ত নিবে
-  } else if (currentLevel === 2) {
-    requiredHistoryDepth = 8;
-  } else {
-    requiredHistoryDepth = 5; // লেভেল ১-এ শর্ট টার্ম ট্রেন্ড এনালাইসিস
-  }
-
+  let requiredHistoryDepth = currentLevel >= 3 ? 15 : (currentLevel === 2 ? 8 : 5);
   const activeHistory = periodHistory.slice(-requiredHistoryDepth);
 
   let bigCount = 0;
@@ -75,45 +67,34 @@ function generateDynamicSmartSignal() {
 
   let predictedSignal = '';
 
-  // ১. ড্রাগন ও স্ট্রং ট্রেন্ড ডিটেকশন (৬০%+ ট্রেন্ড থাকলে সেদিকে যাবে)
   if (bigCount / requiredHistoryDepth >= 0.6) {
     predictedSignal = 'BIG 🟢';
   } else if (smallCount / requiredHistoryDepth >= 0.6) {
     predictedSignal = 'SMALL 🔴';
-  } 
-  // ২. রিভার্সাল ও ৫-স্টেপ প্রফিট রিকভারি লজিক
-  else if (currentLevel >= 3) {
+  } else if (currentLevel >= 3) {
     predictedSignal = bigCount >= smallCount ? 'SMALL 🔴' : 'BIG 🟢';
   } else {
     predictedSignal = bigCount > smallCount ? 'SMALL 🔴' : 'BIG 🟢';
   }
 
-  // অ্যালগরিদম সিমুলেটেড উইন ট্র্যাকিং
-  const isWinSimulated = Math.random() < 0.70; // স্মার্ট ডায়নামিক ফিল্টারিং
-
+  const isWinSimulated = Math.random() < 0.70;
   let oldLevel = currentLevel;
   
   if (isWinSimulated || currentLevel >= MAX_LEVEL) {
-    currentLevel = 1; // উইন হলে বা ৫ লেভেল অতিক্রম করলে রিসেট
+    currentLevel = 1;
   } else {
-    currentLevel++; // লস হলে পরবর্তী মার্টিংগেল লেভেলে যাবে
+    currentLevel++;
   }
 
-  // মেমোরি আপডেট (সর্বোচ্চ ২০টি হিস্ট্রি ধরে রাখবে)
   const rawChoice = predictedSignal.includes('BIG') ? 'BIG' : 'SMALL';
-  if (periodHistory.length >= 20) {
-    periodHistory.shift();
-  }
+  if (periodHistory.length >= 20) periodHistory.shift();
   periodHistory.push(rawChoice);
 
-  return {
-    signal: predictedSignal,
-    level: oldLevel
-  };
+  return { signal: predictedSignal, level: oldLevel };
 }
 
 // এডমিন কমান্ড
-bot.onText(/\/admin|এডমিন প্যানেল/, (msg) => {
+bot.onText(/\/admin|এডমিন প্যানেল|\/start/, (msg) => {
   const chatId = msg.chat.id;
 
   if (chatId !== ADMIN_ID) {
@@ -163,7 +144,6 @@ bot.on('callback_query', async (query) => {
       currentLevel = 1;
       await bot.answerCallbackQuery(query.id, { text: 'ডায়নামিক এনালাইসিস সিগন্যাল চালু হয়েছে!' });
 
-      // প্রতি ৩০ সেকেন্ড পর পর সিগন্যাল পোস্ট
       signalInterval = setInterval(async () => {
         if (!isBotRunning) return;
 
@@ -193,6 +173,10 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// গ্লোবাল এরর হ্যান্ডলার
+// এরর হ্যান্ডলিং (বট যেন ক্র্যাশ করে বন্ধ না হয়)
+bot.on('polling_error', (error) => {
+  console.log('Polling Error:', error.code || error.message);
+});
+
 process.on('uncaughtException', (err) => console.error('Uncaught Exception:', err));
 process.on('unhandledRejection', (reason) => console.error('Unhandled Rejection:', reason));
