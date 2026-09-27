@@ -5,7 +5,7 @@ const axios = require('axios');
 // 🔑 ক্রেডেনশিয়ালস
 const BOT_TOKEN = '8673480574:AAHZQ7kjq5e9oTGX6cShLT0TGkWxojzXkCQ';
 const ADMIN_ID = 8514764458; 
-const CHANNEL_ID = -1004308584896; 
+const CHANNEL_ID = https://t.me/TM_COMMUNITY_01; 
 const API_URL = 'https://draw.ar-lottery01.com/WinGo/WinGo_30S/GetHistoryIssuePage.json';
 
 const bot = new TelegramBot(BOT_TOKEN, { 
