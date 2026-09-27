@@ -28,23 +28,31 @@ http.createServer((req, res) => {
   res.end('WinGo Engine Running Active\n');
 }).listen(PORT, () => console.log(`Server listening on port ${PORT}`));
 
-// 📡 API Fetcher with Enhanced Headers
+// 📡 API Fetcher with Real Browser Bypass (Fixes 403 Forbidden Error)
 async function fetchGameHistory() {
   try {
     const response = await axios.get(API_URL, {
       params: { pageNo: 1, pageSize: 10, ts: Date.now() },
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
-        'Cache-Control': 'no-cache'
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Origin': 'https://draw.ar-lottery01.com',
+        'Referer': 'https://draw.ar-lottery01.com/',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
+        'Priority': 'u=1, i'
       },
-      timeout: 8000
+      timeout: 10000
     });
 
     if (response.data && response.data.data && Array.isArray(response.data.data.list)) {
       return response.data.data.list;
     } else if (Array.isArray(response.data.list)) {
       return response.data.list;
+    } else if (Array.isArray(response.data)) {
+      return response.data;
     }
     return null;
   } catch (err) {
@@ -53,7 +61,7 @@ async function fetchGameHistory() {
   }
 }
 
-// 🧠 Advanced Pattern Logic
+// 🧠 Advanced Pattern Logic Engine
 function analyzeAdvancedPatterns(historyList) {
   const history = historyList.slice(0, 10).map(item => {
     if (item.bigSmall) return item.bigSmall.toUpperCase();
@@ -116,7 +124,6 @@ async function processAndPublishSignal() {
 
   const nextPeriod = String(BigInt(latestPeriod) + 1n);
 
-  // Prevent sending duplicate signal for same period
   if (lastPredictedPeriod === nextPeriod) return;
 
   const predictedDecision = analyzeAdvancedPatterns(history);
@@ -181,7 +188,7 @@ bot.on('callback_query', async (query) => {
       await processAndPublishSignal();
       marketLoopInterval = setInterval(async () => {
         if (isBotRunning) await processAndPublishSignal();
-      }, 15000); // Check API every 15 sec for smooth 30s period cycle
+      }, 15000);
     }
     sendAdminPanel(query.message.chat.id);
   } else if (query.data === 'refresh_status') {
