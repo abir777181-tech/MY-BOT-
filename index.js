@@ -6,7 +6,7 @@ const BOT_TOKEN = '8673480574:AAHZQ7kjq5e9oTGX6cShLT0TGkWxojzXkCQ';
 const ADMIN_ID = 8514764458; 
 
 // 🎯 টার্গেট টেলিগ্রাম চ্যানেল
-const CHANNEL_ID = 'https://t.me/+tAkuQkA-CyMxMGQ1'; 
+const CHANNEL_ID = 'https://t.me/TM_COMMUNITY_01'; 
 
 const bot = new TelegramBot(BOT_TOKEN, { 
   polling: {
