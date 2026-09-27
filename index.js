@@ -5,8 +5,8 @@ const http = require('http');
 const BOT_TOKEN = '8673480574:AAHZQ7kjq5e9oTGX6cShLT0TGkWxojzXkCQ';
 const ADMIN_ID = 8514764458; 
 
-// 🎯 টার্গেট টেলিগ্রাম চ্যানেল
-const CHANNEL_ID = 'https://t.me/TM_COMMUNITY_01'; 
+// 🎯 প্রাইভেট টেলিগ্রাম চ্যানেল আইডি
+const CHANNEL_ID = -1004308584896; 
 
 const bot = new TelegramBot(BOT_TOKEN, { 
   polling: {
@@ -145,7 +145,7 @@ function sendAdminPanel(chatId) {
   };
 
   const currentPeriodDisp = activeGamePeriod ? activeGamePeriod : 'সেট করা হয়নি (অটো জেনারেটিং)';
-  bot.sendMessage(chatId, `🛠 **গেম মার্কেট এডমিন প্যানেল**\n\nঅবস্থা: **${statusText}**\nচ্যানেল: **${CHANNEL_ID}**\nবর্তমান লেভেল: **Level ${currentLevel}**\nরানিং মার্কেট পিরিয়ড: \`${currentPeriodDisp}\``, { parse_mode: 'Markdown', ...options });
+  bot.sendMessage(chatId, `🛠 **গেম মার্কেট এডমিন প্যানেল**\n\nঅবস্থা: **${statusText}**\nচ্যানেল আইডি: \`${CHANNEL_ID}\`\nবর্তমান লেভেল: **Level ${currentLevel}**\nরানিং মার্কেট পিরিয়ড: \`${currentPeriodDisp}\``, { parse_mode: 'Markdown', ...options });
 }
 
 // বাটন হ্যান্ডলিং
