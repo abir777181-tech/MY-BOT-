@@ -30,20 +30,20 @@ const MAX_LEVEL = 5;
 let lastPredictedPeriod = null;
 let lastPredictionSignal = null; // 'BIG' or 'SMALL'
 
-// Keep-Alive Server
+// Render Keep-Alive Server
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('WinGo API Dynamic Engine Active\n');
+  res.end('WinGo Advanced Pattern Engine Active\n');
 }).listen(PORT, () => console.log(`Server listening on port ${PORT}`));
 
-// 📡 API থেকে সর্বশেষ লাইভ হিস্ট্রি ফেচ করার ফাংশন
+// 📡 API থেকে লাইভ হিস্ট্রি আনার ফাংশন
 async function fetchGameHistory() {
   try {
     const response = await axios.get(API_URL, {
       params: { pageNo: 1, pageSize: 10 },
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
         'Origin': 'https://draw.ar-lottery01.com',
         'Referer': 'https://draw.ar-lottery01.com/'
@@ -65,76 +65,100 @@ async function fetchGameHistory() {
   }
 }
 
-// 🧠 ১০টি হিস্ট্রি ডেটা বিশ্লেষণ করে হাই-একুরেসি সিগন্যাল অ্যালগরিদম
-function analyzeHistoryPattern(historyList) {
-  // হিস্ট্রি পার্সিং (০-৪ = SMALL, ৫-৯ = BIG)
-  const parsedList = historyList.slice(0, 10).map(item => {
+// 🧠 প্রফেশনাল প্যাটার্ন ও ট্রেন্ড এনালাইসিস ইঞ্জিন (Advanced Prediction)
+function analyzeAdvancedPatterns(historyList) {
+  // হিস্ট্রি পার্স করা (০-৪ = SMALL, ৫-৯ = BIG)
+  const history = historyList.slice(0, 10).map(item => {
     if (item.bigSmall) return item.bigSmall.toUpperCase();
     let num = item.resultNumber !== undefined ? parseInt(item.resultNumber) : parseInt(item.number);
     if (!isNaN(num)) return num >= 5 ? 'BIG' : 'SMALL';
     return Math.random() < 0.5 ? 'BIG' : 'SMALL';
   });
 
-  // ১. Trend Streak (পরপর ৩টা বা তার বেশি একই আসলে ড্রাগন ট্রেন্ড ফলো করবে)
-  const last1 = parsedList[0];
-  const last2 = parsedList[1];
-  const last3 = parsedList[2];
+  const p0 = history[0]; // সর্বশেষ রেজাল্ট
+  const p1 = history[1]; 
+  const p2 = history[2]; 
+  const p3 = history[3]; 
 
-  if (last1 === last2 && last2 === last3) {
-    return last1; // Trend continuation
+  // ১. 1x1 Zig-Zag / Alternate Pattern (BIG -> SMALL -> BIG -> SMALL)
+  if (p0 !== p1 && p1 !== p2 && p2 !== p3) {
+    return p0 === 'BIG' ? 'SMALL' : 'BIG'; // পরবর্তী চাল প্রেডিক্ট
   }
 
-  // ২. Alternate Bounce (BIG -> SMALL -> BIG হলে এর পরেরটা SMALL আসার সম্ভাবনা বেশি)
-  if (last1 !== last2 && last2 !== last3) {
-    return last1 === 'BIG' ? 'SMALL' : 'BIG';
+  // ২. 2x2 Double Bounce Pattern (BIG -> BIG -> SMALL -> SMALL)
+  if (p0 === p1 && p2 === p3 && p0 !== p2) {
+    return p0; // ২x২ প্যাটার্ন পূর্ণ করতে বর্তমান ট্রেন্ড ধরে রাখা
   }
 
-  // ৩. Majority Ratio Analysis (গত ১০টি গেমের মধ্যে যেটি কম এসেছে সেটি বা ট্রেন্ড রিভার্সাল)
-  const bigCount = parsedList.filter(x => x === 'BIG').length;
-  if (bigCount >= 7) return 'SMALL'; // Overbought BIG -> Predict SMALL
-  if (bigCount <= 3) return 'BIG';   // Overbought SMALL -> Predict BIG
+  // ৩. Overbought / Trend Reversal (পরপর ৪টি বা তার বেশি একই রেজাল্ট আসলে বিপরীত চাল)
+  let consecutiveCount = 1;
+  for (let i = 0; i < history.length - 1; i++) {
+    if (history[i] === history[i + 1]) {
+      consecutiveCount++;
+    } else {
+      break;
+    }
+  }
 
-  // ৪. Default Smart Alternate
-  return last1 === 'BIG' ? 'SMALL' : 'BIG';
+  if (consecutiveCount >= 4) {
+    return p0 === 'BIG' ? 'SMALL' : 'BIG'; // ড্রাগন ব্রেক ধরে রিভার্সাল সিগন্যাল
+  }
+
+  // ৪. Streak Continuation (পরপর ২টি বা ৩টি একই আসলে ট্রেন্ড ফলো)
+  if (consecutiveCount >= 2) {
+    return p0;
+  }
+
+  // ৫. Ratio Based Smart Selection (গত ১০ গেমের মেজোরিটি কাউন্ট)
+  const bigCount = history.filter(x => x === 'BIG').length;
+  if (bigCount >= 7) return 'SMALL';
+  if (bigCount <= 3) return 'BIG';
+
+  // ডিফোল্ট অল্টারনেট
+  return p0 === 'BIG' ? 'SMALL' : 'BIG';
 }
 
-// ⏱️ সিগন্যাল প্রসেসিং, রেজাল্ট ভেরিফিকেশন এবং পাবলিশ
+// ⏱️ সিগন্যাল প্রসেসিং, ভেরিফিকেশন ও পাবলিশিং
 async function processAndPublishSignal() {
   if (!isBotRunning) return;
 
   const history = await fetchGameHistory();
 
   if (!history || history.length === 0) {
-    console.log('API ডেটা মেলেনি, পরবর্তী সাইকেলের জন্য অপেক্ষা করা হচ্ছে...');
+    console.log('⚠️ API থেকে ডেটা পাওয়া যায়নি, পরবর্তী চক্রের জন্য অপেক্ষা...');
     return;
   }
 
-  const latestData = history[0]; // সর্বশেষ যে পিরিয়ডের খেলা শেষ হলো
+  const latestData = history[0]; // রানিং কমপ্লিটেড গেম
   const latestPeriod = String(latestData.issue || latestData.period || latestData.issueNo);
 
-  // 🔍 ১. আগের পিরিয়ডের সিগন্যাল উইন হলো নাকি লস হলো চেক
+  // 🔍 ১. আগের সিগন্যাল অটো ভেরিফিকেশন (Win / Loss Calculation)
   if (lastPredictedPeriod && lastPredictionSignal) {
     if (latestPeriod === lastPredictedPeriod) {
       const num = latestData.resultNumber !== undefined ? parseInt(latestData.resultNumber) : parseInt(latestData.number);
       const actualResult = num >= 5 ? 'BIG' : 'SMALL';
 
       if (lastPredictionSignal === actualResult) {
-        // WIN -> ১ নম্বরে রিসেট
-        console.log(`✅ WIN! Period: ${latestPeriod} \vert{} Signal:${lastPredictionSignal} | Result: ${actualResult}`);         currentLevel = 1;       } else {         // LOSS -> Step 1 বৃদ্ধি (সর্বোচ্চ 5 Step)         console.log(`❌ LOSS! Period: ${latestPeriod} | Signal: ${lastPredictionSignal} \vert{} Result:${actualResult}`);
+        // WIN -> লেভেল ১-এ রিসেট
+        console.log(`✅ [WIN] Period: ${latestPeriod} | Predicted: ${lastPredictionSignal} \vert{} Actual:${actualResult}`);
+        currentLevel = 1;
+      } else {
+        // LOSS -> Step + 1 (Max 5 Step)
+        console.log(`❌ [LOSS] Period: ${latestPeriod} | Predicted: ${lastPredictionSignal} \vert{} Actual:${actualResult}`);
         if (currentLevel < MAX_LEVEL) {
           currentLevel++;
         } else {
-          currentLevel = 1; // ৫ম স্টেপ শেষে রিসেট
+          currentLevel = 1; // ৫ম স্টেপ শেষে ১ নম্বরে রিসেট
         }
       }
     }
   }
 
-  // 🎯 ২. পরবর্তী পিরিয়ড নম্বর জেনারেট
+  // 🎯 ২. পরবর্তী পিরিয়ড জেনারেট
   const nextPeriod = String(BigInt(latestPeriod) + 1n);
 
-  // 🎯 ৩. ১০-হিস্ট্রি এনালাইসিস করে সিগন্যাল তৈরি
-  const predictedDecision = analyzeHistoryPattern(history);
+  // 🎯 ৩. স্মার্ট প্যাটার্ন এনালাইসিস করে প্রেডিকশন
+  const predictedDecision = analyzeAdvancedPatterns(history);
   const formattedSignal = predictedDecision === 'BIG' ? 'BIG 🟢' : 'SMALL 🔴';
 
   // স্টেট আপডেট
@@ -173,8 +197,8 @@ function sendAdminPanel(chatId) {
     }
   };
 
-  const currentPeriodDisp = lastPredictedPeriod ? lastPredictedPeriod : 'API থেকে সিঙ্ক হচ্ছে...';
-  bot.sendMessage(chatId, `🛠 **গেম মার্কেট এডমিন প্যানেল (Auto API Verification)**\n\nঅবস্থা: **${statusText}**\nচ্যানেল আইডি: \`${CHANNEL_ID}\`\nবর্তমান লেভেল: **Level ${currentLevel}**\nরানিং পিরিয়ড: \`${currentPeriodDisp}\``, { parse_mode: 'Markdown', ...options });
+  const currentPeriodDisp = lastPredictedPeriod ? lastPredictedPeriod : 'API অটো সিঙ্ক সক্রিয়...';
+  bot.sendMessage(chatId, `🛠 **গেম মার্কেট এডমিন প্যানেল (Pattern Engine)**\n\nঅবস্থা: **${statusText}**\nচ্যানেল আইডি: \`${CHANNEL_ID}\`\nবর্তমান লেভেল: **Level ${currentLevel}**\nরানিং পিরিয়ড: \`${currentPeriodDisp}\``, { parse_mode: 'Markdown', ...options });
 }
 
 // বাটন হ্যান্ডলিং
@@ -192,7 +216,7 @@ bot.on('callback_query', async (query) => {
     } else {
       isBotRunning = true;
       currentLevel = 1;
-      await bot.answerCallbackQuery(query.id, { text: 'API এনালাইসিস সিগন্যাল চালু হয়েছে!' });
+      await bot.answerCallbackQuery(query.id, { text: 'অ্যাডভান্সড প্যাটার্ন সিগন্যাল চালু হয়েছে!' });
       
       await processAndPublishSignal();
       marketLoopInterval = setInterval(async () => {
